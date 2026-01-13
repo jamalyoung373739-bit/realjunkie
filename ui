@@ -1,4 +1,4 @@
--- [[ PHARMACII HUB - V43: DEEP SEARCH DELETE + FIXED UI ]] --
+-- [[ PHARMACII HUB - V46: HBE VISUAL RESET + ROBUST DELETE ]] --
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -78,8 +78,8 @@ local function LoadHub()
     local CurrentTab = nil
     local TruckingHeld = false
     local MagnetCooldown = 0
+    local MagnetLatchTime = 0.5
     local FeatureTable = {}
-    local OOBConnection = nil
     
     local ThemeColor = Color3.fromRGB(130, 70, 255)
     local DarkBG = Color3.fromRGB(8, 8, 10)
@@ -451,7 +451,7 @@ local function LoadHub()
         Page.Visible = false
         Page.BackgroundTransparency = 1
         Page.ScrollBarThickness = 0
-        Page.AutomaticCanvasSize = Enum.AutomaticSize.Y -- THIS IS THE KEY FIX FOR MISSING BUTTONS
+        Page.AutomaticCanvasSize = Enum.AutomaticSize.Y 
         Instance.new("UIListLayout", Page).Padding = UDim.new(0, 10)
 
         local TabBtn = Instance.new("TextButton")
@@ -703,6 +703,14 @@ local function LoadHub()
             TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = HBEEnabled and ThemeColor or Color3.fromRGB(45, 45, 48)}):Play()
             TweenService:Create(dot, TweenInfo.new(0.2), {Position = HBEEnabled and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}):Play()
             SendNotify("Hitbox Expander", HBEEnabled and "Enabled" or "Disabled")
+
+            -- RESET VISUALS WHEN TURNED OFF
+            if not state and LocalPlayer.Character then
+                 for _, partName in pairs({"Hitbox", "Jersey", "UpperJersey", "LowerJersey"}) do
+                     local part = LocalPlayer.Character:FindFirstChild(partName)
+                     if part then part.Transparency = 1 end
+                 end
+            end
         end
 
         AddConnection(slideBg.InputBegan, function(input)
@@ -919,23 +927,23 @@ local function LoadHub()
             elseif key == "QBAim" then 
                 QBAimEnabled = enabled
                 if enabled then SendNotify("Info", "Hold Right Click to Aim") end
-            elseif key == "Time" then game:GetService("Lighting").ClockTime = enabled and _G.CustomTime or 12
-            elseif key == "Bright" then game:GetService("Lighting").Brightness = enabled and _G.CustomBright or 2
+            elseif key == "Time" then game:GetService("Lighting").ClockTime = enabled and _G.CustomTime or OriginalTime
+            elseif key == "Bright" then game:GetService("Lighting").Brightness = enabled and _G.CustomBright or OriginalBrightness
             elseif key == "NoBounds" then 
                 NoBoundsEnabled = enabled
                 if enabled then
-                    -- DEEP SEARCH DELETION LOGIC (NO LAG)
+                    -- DEEP SEARCH DELETION
                     local function RecursiveDestroy(parent)
                         for _, v in pairs(parent:GetChildren()) do
                             if v.Name == _G.OOB_Part_Name then
                                 v:Destroy()
+                                SendNotify("No Bounds", "Deleted " .. v.Name)
                             else
                                 RecursiveDestroy(v)
                             end
                         end
                     end
                     RecursiveDestroy(workspace)
-                    SendNotify("No Bounds", "Executed")
                 end
             end
 
