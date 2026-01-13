@@ -1,23 +1,29 @@
--- [[ PHARMACII HUB - V9: TYRANT PURPLE THEME + SMART BYPASS (NO WHITELIST) ]] --
+-- [[ PHARMACII HUB - V43: DEEP SEARCH DELETE + FIXED UI ]] --
 
--- 1. Services & Player Setup
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local MyName = LocalPlayer.Name
 local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Camera = workspace.CurrentCamera
 
-print("PHARMACII: Initializing for " .. MyName .. "...")
+-- [[ 🟢 CONFIGURATION 🟢 ]] --
+_G.HideKey = Enum.KeyCode.LeftControl
+_G.OOB_Part_Name = "OOB Area" -- Exact name of the Model/Part to DELETE
+_G.MagRange = 25 
+_G.TuckSpeed = 100
+_G.WalkSpeed = 16
+_G.JumpPower = 50
+_G.InfiniteJump = false
+_G.CustomTime = 12
+_G.CustomBright = 2
+_G.QBPrediction = 10
+_G.HBESize = 2
 
--- 2. SMART BYPASS LOGIC (Runs Automatically)
 local function ApplySmartBypass()
-    -- Check for "Tech" game indicators
     local isTechGame = ReplicatedStorage:FindFirstChild("Values") or 
                        ReplicatedStorage:FindFirstChild("Handshake") or 
                        workspace:FindFirstChild("Values")
@@ -27,28 +33,15 @@ local function ApplySmartBypass()
 
     if ac then
         if isTechGame then
-            -- CASE A: TECH GAME (Keep AC Alive)
-            print("PHARMACII: Tech Game Detected. Catching Safe.")
-            StarterGui:SetCore("SendNotification", {
-                Title = "Smart Bypass",
-                Text = "Tech Game Detected - AC Kept Alive",
-                Duration = 3
-            })
+            StarterGui:SetCore("SendNotification", {Title = "Smart Bypass", Text = "Tech Game - AC Cached", Duration = 3})
         else
-            -- CASE B: OLD GAME (Destroy AC)
-            print("PHARMACII: Old Game Detected. Destroying AC.")
             ac.Disabled = true
             ac:Destroy()
-            StarterGui:SetCore("SendNotification", {
-                Title = "Smart Bypass",
-                Text = "Old Game Detected - Anti-Cheat Destroyed!",
-                Duration = 3
-            })
+            StarterGui:SetCore("SendNotification", {Title = "Smart Bypass", Text = "Old Game - AC Destroyed", Duration = 3})
         end
     end
 end
 
--- 3. Main Hub Function
 local function LoadHub()
     task.spawn(ApplySmartBypass)
     LocalPlayer.CharacterAdded:Connect(function()
@@ -56,33 +49,13 @@ local function LoadHub()
         ApplySmartBypass()
     end)
 
-    print("PHARMACII: Loading UI...")
-
     local Connections = {}
-
     local function AddConnection(signal, callback)
         local connection = signal:Connect(callback)
         table.insert(Connections, connection)
         return connection
     end
 
-    -- Lighting Backups
-    local OriginalTime = game:GetService("Lighting").ClockTime
-    local OriginalBrightness = game:GetService("Lighting").Brightness
-
-    -- Global Settings
-    _G.HideKey = Enum.KeyCode.LeftControl
-    _G.MagRange = 25 
-    _G.TuckSpeed = 100
-    _G.WalkSpeed = 16
-    _G.JumpPower = 50
-    _G.InfiniteJump = false
-    _G.CustomTime = 12
-    _G.CustomBright = 2
-    _G.QBPrediction = 10
-    _G.HBESize = 5
-
-    -- Toggles
     local MagnetEnabled = false
     local VisualsEnabled = false
     local AutoTuckEnabled = false
@@ -98,32 +71,24 @@ local function LoadHub()
     local AutoTackleEnabled = false
     local QBAimEnabled = false
     local HBEEnabled = false
+    local HBEVisuals = false
+    local NoBoundsEnabled = false
     local IsFollowing = false
     local CanDrag = true
     local CurrentTab = nil
     local TruckingHeld = false
     local MagnetCooldown = 0
-    local MagnetLatchTime = 0.5
     local FeatureTable = {}
+    local OOBConnection = nil
     
-    -- [[ THEME UPDATE: TYRANT PURPLE ]] --
-    local ThemeColor = Color3.fromRGB(130, 70, 255) -- Deep Electric Purple (Matches Image 2)
-    local DarkBG = Color3.fromRGB(8, 8, 10)         -- Pitch Black/Deep Grey Background
-    local ElementBG = Color3.fromRGB(18, 18, 22)    -- Slightly lighter for buttons
+    local ThemeColor = Color3.fromRGB(130, 70, 255)
+    local DarkBG = Color3.fromRGB(8, 8, 10)
+    local ElementBG = Color3.fromRGB(18, 18, 22)
 
-    -- GUI Parent Check
     local GuiParent = game:GetService("CoreGui")
-    pcall(function()
-        if not GuiParent:FindFirstChild("RobloxGui") then
-            GuiParent = LocalPlayer:WaitForChild("PlayerGui")
-        end
-    end)
+    pcall(function() if not GuiParent:FindFirstChild("RobloxGui") then GuiParent = LocalPlayer:WaitForChild("PlayerGui") end end)
+    if GuiParent:FindFirstChild("PharmaciiHub_Master") then GuiParent.PharmaciiHub_Master:Destroy() end
 
-    if GuiParent:FindFirstChild("PharmaciiHub_Master") then
-        GuiParent.PharmaciiHub_Master:Destroy()
-    end
-
-    -- Create GUI
     local ScreenGui = Instance.new("ScreenGui", GuiParent)
     ScreenGui.Name = "PharmaciiHub_Master"
     ScreenGui.ResetOnSpawn = false
@@ -138,63 +103,144 @@ local function LoadHub()
     MagPart.Transparency = 1
     MagPart.Anchored = true
     MagPart.CanCollide = false
-    MagPart.CanQuery = false
-    MagPart.CanTouch = false
     MagPart.Massless = true
 
     local MainFrame = Instance.new("Frame", ScreenGui)
     MainFrame.Size = UDim2.new(0, 800, 0, 480)
     MainFrame.Position = UDim2.new(0.5, -400, 0.5, -240)
-    MainFrame.BackgroundColor3 = DarkBG -- Updated Background
+    MainFrame.BackgroundColor3 = DarkBG
     MainFrame.BorderSizePixel = 0
     MainFrame.Visible = true
+    MainFrame.ClipsDescendants = false
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
 
-    -- Cleanup Function
-    local function Cleanup()
+    local Header = Instance.new("Frame", MainFrame)
+    Header.Size = UDim2.new(1, 0, 0, 40)
+    Header.BackgroundTransparency = 1
+    
+    local Title = Instance.new("TextLabel", Header)
+    Title.Text = "Pharmacii Hub"
+    Title.TextColor3 = ThemeColor
+    Title.Font = "GothamBold"
+    Title.TextSize = 16
+    Title.Size = UDim2.new(0, 200, 1, 0)
+    Title.Position = UDim2.new(0, 30, 0, 0)
+    Title.TextXAlignment = "Left"
+    Title.BackgroundTransparency = 1
+    
+    local CloseBtn = Instance.new("TextButton", Header)
+    CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+    CloseBtn.Position = UDim2.new(1, -34, 0, 8)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    CloseBtn.Font = "GothamBold"
+    CloseBtn.TextSize = 16
+    
+    local ResizeBtnBR = Instance.new("TextButton", MainFrame)
+    ResizeBtnBR.Size = UDim2.new(0, 25, 0, 25)
+    ResizeBtnBR.Position = UDim2.new(1, -25, 1, -25)
+    ResizeBtnBR.BackgroundTransparency = 1
+    ResizeBtnBR.Text = "↘"
+    ResizeBtnBR.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ResizeBtnBR.TextSize = 20
+    ResizeBtnBR.Font = "GothamBold"
+    ResizeBtnBR.ZIndex = 10
+
+    local isResizingBR = false
+    local resizeStartBR = Vector2.new()
+    local startSizeBR = UDim2.new()
+
+    AddConnection(ResizeBtnBR.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isResizingBR = true
+            resizeStartBR = input.Position
+            startSizeBR = MainFrame.Size
+            CanDrag = false
+            ResizeBtnBR.TextColor3 = ThemeColor
+        end
+    end)
+
+    AddConnection(UserInputService.InputChanged, function(input)
+        if isResizingBR and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - resizeStartBR
+            local newX = math.max(450, startSizeBR.X.Offset + delta.X)
+            local newY = math.max(300, startSizeBR.Y.Offset + delta.Y)
+            MainFrame.Size = UDim2.new(0, newX, 0, newY)
+        end
+    end)
+
+    AddConnection(UserInputService.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isResizingBR = false
+            CanDrag = true
+            ResizeBtnBR.TextColor3 = Color3.fromRGB(150, 150, 150)
+        end
+    end)
+
+    local ResizeBtnTL = Instance.new("TextButton", MainFrame)
+    ResizeBtnTL.Size = UDim2.new(0, 25, 0, 25)
+    ResizeBtnTL.Position = UDim2.new(0, 0, 0, 0)
+    ResizeBtnTL.BackgroundTransparency = 1
+    ResizeBtnTL.Text = "↖"
+    ResizeBtnTL.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ResizeBtnTL.TextSize = 20
+    ResizeBtnTL.Font = "GothamBold"
+    ResizeBtnTL.ZIndex = 10
+
+    local isResizingTL = false
+    local resizeStartTL = Vector2.new()
+    local startSizeTL = UDim2.new()
+    local startPosTL = UDim2.new()
+
+    AddConnection(ResizeBtnTL.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isResizingTL = true
+            resizeStartTL = input.Position
+            startSizeTL = MainFrame.Size
+            startPosTL = MainFrame.Position
+            CanDrag = false
+            ResizeBtnTL.TextColor3 = ThemeColor
+        end
+    end)
+
+    AddConnection(UserInputService.InputChanged, function(input)
+        if isResizingTL and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - resizeStartTL
+            local newWidth = math.max(450, startSizeTL.X.Offset - delta.X)
+            local newHeight = math.max(300, startSizeTL.Y.Offset - delta.Y)
+            local newX = startPosTL.X.Offset + delta.X
+            local newY = startPosTL.Y.Offset + delta.Y
+            if newWidth <= 450 then newX = startPosTL.X.Offset + (startSizeTL.X.Offset - 450) end
+            if newHeight <= 300 then newY = startPosTL.Y.Offset + (startSizeTL.Y.Offset - 300) end
+            MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+            MainFrame.Position = UDim2.new(startPosTL.X.Scale, newX, startPosTL.Y.Scale, newY)
+        end
+    end)
+
+    AddConnection(UserInputService.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isResizingTL = false
+            CanDrag = true
+            ResizeBtnTL.TextColor3 = Color3.fromRGB(150, 150, 150)
+        end
+    end)
+
+    AddConnection(CloseBtn.MouseButton1Click, function()
         for _, connection in pairs(Connections) do
             if connection then connection:Disconnect() end
         end
-        Connections = {}
+        Connections = {} 
         if MagPart then MagPart:Destroy() end
         if SelectionBox then SelectionBox:Destroy() end
-        
-        if LocalPlayer.Character then
-            local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hum then
-                hum.WalkSpeed = 16
-                hum.JumpPower = 50
-            end
-            if hrp then hrp.AssemblyLinearVelocity = Vector3.zero end
-            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = true end
-            end
-            local hb = LocalPlayer.Character:FindFirstChild("Hitbox") or LocalPlayer.Character:FindFirstChild("Jersey")
-            if hb then hb.Size = Vector3.new(2.31, 5.4, 2.3) end
-        end
-
-        for _, plr in pairs(game.Players:GetPlayers()) do
-            if plr.Character then
-                local head = plr.Character:FindFirstChild("Head")
-                if head then
-                    head.Size = Vector3.new(2, 1, 1)
-                    head.Transparency = 0
-                end
-                local jersey = plr.Character:FindFirstChild("Jersey") or plr.Character:FindFirstChild("Hitbox")
-                if jersey then
-                    jersey.Size = Vector3.new(2.31, 5.4, 2.3)
-                    jersey.Transparency = 1
-                end
-            end
-        end
-
-        game:GetService("Lighting").ClockTime = OriginalTime
-        game:GetService("Lighting").Brightness = OriginalBrightness
         if ScreenGui then ScreenGui:Destroy() end
-    end
+        StarterGui:SetCore("SendNotification", {
+            Title = "Pharmacii Hub",
+            Text = "Script Unloaded Safely.",
+            Duration = 3
+        })
+    end)
 
-    -- Toggle Button
     local ToggleFrame = Instance.new("Frame", ScreenGui)
     ToggleFrame.Size = UDim2.new(0, 50, 0, 50)
     ToggleFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
@@ -202,9 +248,6 @@ local function LoadHub()
     ToggleFrame.BorderSizePixel = 0
     ToggleFrame.Visible = UserInputService.TouchEnabled
     Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 8)
-    local ToggleStroke = Instance.new("UIStroke", ToggleFrame)
-    ToggleStroke.Color = ThemeColor
-    ToggleStroke.Thickness = 2
     local ToggleBtn = Instance.new("TextButton", ToggleFrame)
     ToggleBtn.Size = UDim2.new(1, 0, 1, 0)
     ToggleBtn.BackgroundTransparency = 1
@@ -217,37 +260,28 @@ local function LoadHub()
         MainFrame.Visible = not MainFrame.Visible
     end)
 
-    local dragging, dragStart, startPos
-    AddConnection(ToggleFrame.InputBegan, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = ToggleFrame.Position
-        end
-    end)
-    AddConnection(ToggleFrame.InputChanged, function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            ToggleFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    AddConnection(ToggleFrame.InputEnded, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
+    local NotifyContainer = Instance.new("Frame", ScreenGui)
+    NotifyContainer.Name = "NotifyContainer"
+    NotifyContainer.Size = UDim2.new(0, 250, 0.6, 0) 
+    NotifyContainer.Position = UDim2.new(1, -260, 0.3, 0) 
+    NotifyContainer.BackgroundTransparency = 1
+    
+    local NotifyLayout = Instance.new("UIListLayout", NotifyContainer)
+    NotifyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    NotifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom 
+    NotifyLayout.Padding = UDim.new(0, 6)
 
-    -- Notification Function
     local function SendNotify(title, text)
         if not ScreenGui.Parent then return end
-        local nFrame = Instance.new("Frame", ScreenGui)
-        nFrame.Size = UDim2.new(0, 220, 0, 50)
+        local nFrame = Instance.new("Frame", NotifyContainer)
+        nFrame.Size = UDim2.new(1, 0, 0, 50)
         nFrame.BackgroundColor3 = ElementBG
-        nFrame.Position = UDim2.new(1, 10, 0.8, 0)
+        nFrame.BackgroundTransparency = 1 
         Instance.new("UICorner", nFrame)
         local nStroke = Instance.new("UIStroke", nFrame)
         nStroke.Color = ThemeColor
         nStroke.Thickness = 1
+        nStroke.Transparency = 1
         local nTitle = Instance.new("TextLabel", nFrame)
         nTitle.Text = title
         nTitle.Size = UDim2.new(1, -20, 0, 25)
@@ -257,6 +291,7 @@ local function LoadHub()
         nTitle.TextSize = 13
         nTitle.BackgroundTransparency = 1
         nTitle.TextXAlignment = "Left"
+        nTitle.TextTransparency = 1
         local nText = Instance.new("TextLabel", nFrame)
         nText.Text = text
         nText.Size = UDim2.new(1, -20, 0, 20)
@@ -266,17 +301,27 @@ local function LoadHub()
         nText.TextSize = 10
         nText.BackgroundTransparency = 1
         nText.TextXAlignment = "Left"
-        TweenService:Create(nFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Position = UDim2.new(1, -230, 0.8, 0)}):Play()
-        task.delay(3, function()
+        nText.TextTransparency = 1
+        
+        TweenService:Create(nFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+        TweenService:Create(nStroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
+        TweenService:Create(nTitle, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+        TweenService:Create(nText, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+
+        task.delay(4, function()
             if nFrame and nFrame.Parent then
-                TweenService:Create(nFrame, TweenInfo.new(0.4), {Position = UDim2.new(1, 10, 0.8, 0)}):Play()
-                task.wait(0.5)
+                local t1 = TweenService:Create(nFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+                local t2 = TweenService:Create(nStroke, TweenInfo.new(0.5), {Transparency = 1})
+                TweenService:Create(nTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+                TweenService:Create(nText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+                t1:Play()
+                t2:Play()
+                t1.Completed:Wait()
                 if nFrame then nFrame:Destroy() end
             end
         end)
     end
 
-    -- Log Console
     local LogFrame = Instance.new("ScrollingFrame", MainFrame)
     LogFrame.Name = "LogConsole"
     LogFrame.Size = UDim2.new(1, -240, 0, 80)
@@ -296,16 +341,16 @@ local function LoadHub()
         l.TextColor3 = Color3.fromRGB(200, 200, 200)
         l.Font = "Code"
         l.TextSize = 11
-        l.Text = " > " .. text
+        local timestamp = os.date("%H:%M:%S")
+        l.Text = string.format("[%s] ► %s", timestamp, text)
         l.TextXAlignment = "Left"
         LogFrame.CanvasSize = UDim2.new(0, 0, 0, LogLayout.AbsoluteContentSize.Y)
         LogFrame.CanvasPosition = Vector2.new(0, LogLayout.AbsoluteContentSize.Y)
     end
 
-    -- Main UI Dragging
     local mainDragging, mainDragStart, mainStartPos
     AddConnection(MainFrame.InputBegan, function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and CanDrag then
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and CanDrag and not isResizingBR and not isResizingTL then
             mainDragging = true
             mainDragStart = input.Position
             mainStartPos = MainFrame.Position
@@ -323,31 +368,6 @@ local function LoadHub()
         end
     end)
 
-    -- Header & Close Button
-    local Header = Instance.new("Frame", MainFrame)
-    Header.Size = UDim2.new(1, 0, 0, 40)
-    Header.BackgroundTransparency = 1
-    local Title = Instance.new("TextLabel", Header)
-    Title.Text = "Pharmacii Hub"
-    Title.TextColor3 = ThemeColor
-    Title.Font = "GothamBold"
-    Title.TextSize = 16
-    Title.Size = UDim2.new(0, 200, 1, 0)
-    Title.Position = UDim2.new(0, 30, 0, 0)
-    Title.TextXAlignment = "Left"
-    Title.BackgroundTransparency = 1
-    local CloseBtn = Instance.new("TextButton", Header)
-    CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-    CloseBtn.Position = UDim2.new(1, -34, 0, 8)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    CloseBtn.Font = "GothamBold"
-    CloseBtn.TextSize = 14
-    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
-    AddConnection(CloseBtn.MouseButton1Click, Cleanup)
-
-    -- Sidebar & Search
     local Sidebar = Instance.new("Frame", MainFrame)
     Sidebar.Size = UDim2.new(0, 220, 1, -40)
     Sidebar.Position = UDim2.new(0, 0, 0, 40)
@@ -376,7 +396,6 @@ local function LoadHub()
     SearchBox.PlaceholderColor3 = Color3.fromRGB(80, 80, 80)
     SearchBox.TextXAlignment = "Left"
 
-    -- Profile Section
     local ProfileFrame = Instance.new("Frame", Sidebar)
     ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
     ProfileFrame.Position = UDim2.new(0, 10, 1, -60)
@@ -412,7 +431,6 @@ local function LoadHub()
     pUser.TextXAlignment = "Left"
     pUser.BackgroundTransparency = 1
 
-    -- Tab Scroller
     local TabScroll = Instance.new("ScrollingFrame", Sidebar)
     TabScroll.Size = UDim2.new(1, 0, 1, -210)
     TabScroll.Position = UDim2.new(0, 0, 0, 55)
@@ -422,7 +440,6 @@ local function LoadHub()
     TabLayout.Padding = UDim.new(0, 5)
     TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    -- Pages Container
     local PagesContainer = Instance.new("Frame", MainFrame)
     PagesContainer.Size = UDim2.new(1, -240, 1, -160)
     PagesContainer.Position = UDim2.new(0, 230, 0, 50)
@@ -434,6 +451,7 @@ local function LoadHub()
         Page.Visible = false
         Page.BackgroundTransparency = 1
         Page.ScrollBarThickness = 0
+        Page.AutomaticCanvasSize = Enum.AutomaticSize.Y -- THIS IS THE KEY FIX FOR MISSING BUTTONS
         Instance.new("UIListLayout", Page).Padding = UDim.new(0, 10)
 
         local TabBtn = Instance.new("TextButton")
@@ -549,7 +567,7 @@ local function LoadHub()
         slideBg.BackgroundColor3 = Color3.fromRGB(40, 40, 42)
         Instance.new("UICorner", slideBg)
         local slideFill = Instance.new("Frame", slideBg)
-        slideFill.Size = UDim2.new(_G.MagRange / 500, 0, 1, 0) -- FIXED 500
+        slideFill.Size = UDim2.new(_G.MagRange / 500, 0, 1, 0) 
         slideFill.BackgroundColor3 = ThemeColor
         Instance.new("UICorner", slideFill)
         local hbBtn = Instance.new("TextButton", extra)
@@ -582,19 +600,126 @@ local function LoadHub()
         end
 
         AddConnection(slideBg.InputBegan, function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 CanDrag = false
                 local move = AddConnection(UserInputService.InputChanged, function(m)
-                    if m.UserInputType == Enum.UserInputType.MouseMovement or m.UserInputType == Enum.UserInputType.Touch then
+                    if m.UserInputType == Enum.UserInputType.MouseMovement then
                         local scale = math.clamp((m.Position.X - slideBg.AbsolutePosition.X) / slideBg.AbsoluteSize.X, 0, 1)
                         slideFill.Size = UDim2.new(scale, 0, 1, 0)
-                        _G.MagRange = math.floor(scale * 500) -- FIXED 500
+                        _G.MagRange = math.floor(scale * 500)
                         rngLbl.Text = "Catch Range: " .. _G.MagRange
                     end
                 end)
                 local release
                 release = AddConnection(UserInputService.InputEnded, function(k)
-                    if k.UserInputType == Enum.UserInputType.MouseButton1 or k.UserInputType == Enum.UserInputType.Touch then
+                    if k.UserInputType == Enum.UserInputType.MouseButton1 then
+                        move:Disconnect()
+                        release:Disconnect()
+                        CanDrag = true
+                    end
+                end)
+            end
+        end)
+        AddConnection(btn.MouseButton1Click, function() ToggleMag(not MagnetEnabled) end)
+        AddConnection(hbBtn.MouseButton1Click, function()
+            VisualsEnabled = not VisualsEnabled
+            TweenService:Create(hbBtn, TweenInfo.new(0.2), {BackgroundColor3 = VisualsEnabled and ThemeColor or Color3.fromRGB(45, 45, 48)}):Play()
+            TweenService:Create(hbDot, TweenInfo.new(0.2), {Position = VisualsEnabled and UDim2.new(1, -14, 0.5, -5.5) or UDim2.new(0, 2, 0.5, -5.5)}):Play()
+            SendNotify("Hitboxes", VisualsEnabled and "Shown" or "Hidden")
+        end)
+    end
+
+    local function CreateHBEUI(page)
+        local frame = Instance.new("Frame", page)
+        frame.Size = UDim2.new(1, -20, 0, 60)
+        frame.BackgroundColor3 = ElementBG
+        frame.ClipsDescendants = true
+        Instance.new("UICorner", frame)
+        local lbl = Instance.new("TextLabel", frame)
+        lbl.Text = "Hitbox Expander (Self)"
+        lbl.Size = UDim2.new(0.6, 0, 0, 60)
+        lbl.Position = UDim2.new(0, 20, 0, 0)
+        lbl.TextColor3 = Color3.new(1, 1, 1)
+        lbl.Font = "GothamBold"
+        lbl.TextSize = 13
+        lbl.TextXAlignment = "Left"
+        lbl.BackgroundTransparency = 1
+        local btn = Instance.new("TextButton", frame)
+        btn.Size = UDim2.new(0, 36, 0, 18)
+        btn.Position = UDim2.new(1, -50, 0, 21)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 48)
+        btn.Text = ""
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+        local dot = Instance.new("Frame", btn)
+        dot.Size = UDim2.new(0, 14, 0, 14)
+        dot.Position = UDim2.new(0, 2, 0.5, -7)
+        dot.BackgroundColor3 = Color3.new(1, 1, 1)
+        Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+        local extra = Instance.new("Frame", frame)
+        extra.Size = UDim2.new(1, -40, 0, 100)
+        extra.Position = UDim2.new(0, 20, 0, 60)
+        extra.BackgroundTransparency = 1
+        local rngLbl = Instance.new("TextLabel", extra)
+        rngLbl.Text = "Size: " .. _G.HBESize
+        rngLbl.Size = UDim2.new(1, 0, 0, 15)
+        rngLbl.TextColor3 = Color3.fromRGB(150, 150, 155)
+        rngLbl.Font = "Gotham"
+        rngLbl.TextSize = 11
+        rngLbl.BackgroundTransparency = 1
+        rngLbl.TextXAlignment = "Left"
+        local slideBg = Instance.new("Frame", extra)
+        slideBg.Size = UDim2.new(1, 0, 0, 6)
+        slideBg.Position = UDim2.new(0, 0, 0, 25)
+        slideBg.BackgroundColor3 = Color3.fromRGB(40, 40, 42)
+        Instance.new("UICorner", slideBg)
+        local slideFill = Instance.new("Frame", slideBg)
+        slideFill.Size = UDim2.new(_G.HBESize / 5, 0, 1, 0) 
+        slideFill.BackgroundColor3 = ThemeColor
+        Instance.new("UICorner", slideFill)
+        local hbBtn = Instance.new("TextButton", extra)
+        hbBtn.Size = UDim2.new(0, 30, 0, 15)
+        hbBtn.Position = UDim2.new(1, -30, 0, 52)
+        hbBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 48)
+        hbBtn.Text = ""
+        Instance.new("UICorner", hbBtn).CornerRadius = UDim.new(1, 0)
+        local hbDot = Instance.new("Frame", hbBtn)
+        hbDot.Size = UDim2.new(0, 11, 0, 11)
+        hbDot.Position = UDim2.new(0, 2, 0.5, -5.5)
+        hbDot.BackgroundColor3 = Color3.new(1, 1, 1)
+        Instance.new("UICorner", hbDot).CornerRadius = UDim.new(1, 0)
+        local hbLbl = Instance.new("TextLabel", extra)
+        hbLbl.Text = "Show Hitboxes"
+        hbLbl.Size = UDim2.new(0, 100, 0, 15)
+        hbLbl.Position = UDim2.new(1, -135, 0, 52)
+        hbLbl.TextColor3 = Color3.fromRGB(150, 150, 155)
+        hbLbl.Font = "Gotham"
+        hbLbl.TextSize = 11
+        hbLbl.BackgroundTransparency = 1
+        hbLbl.TextXAlignment = "Right"
+
+        local function ToggleHBE(state)
+            HBEEnabled = state
+            TweenService:Create(frame, TweenInfo.new(0.3), {Size = UDim2.new(1, -20, 0, HBEEnabled and 150 or 60)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = HBEEnabled and ThemeColor or Color3.fromRGB(45, 45, 48)}):Play()
+            TweenService:Create(dot, TweenInfo.new(0.2), {Position = HBEEnabled and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}):Play()
+            SendNotify("Hitbox Expander", HBEEnabled and "Enabled" or "Disabled")
+        end
+
+        AddConnection(slideBg.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                CanDrag = false
+                local move = AddConnection(UserInputService.InputChanged, function(m)
+                    if m.UserInputType == Enum.UserInputType.MouseMovement then
+                        local scale = math.clamp((m.Position.X - slideBg.AbsolutePosition.X) / slideBg.AbsoluteSize.X, 0, 1)
+                        slideFill.Size = UDim2.new(scale, 0, 1, 0)
+                        _G.HBESize = math.floor(scale * 5 * 10) / 10 
+                        if _G.HBESize > 5 then _G.HBESize = 5 end
+                        rngLbl.Text = "Size: " .. _G.HBESize
+                    end
+                end)
+                local release
+                release = AddConnection(UserInputService.InputEnded, function(k)
+                    if k.UserInputType == Enum.UserInputType.MouseButton1 then
                         move:Disconnect()
                         release:Disconnect()
                         CanDrag = true
@@ -603,20 +728,13 @@ local function LoadHub()
             end
         end)
 
-        AddConnection(btn.MouseButton1Click, function() ToggleMag(not MagnetEnabled) end)
+        AddConnection(btn.MouseButton1Click, function() ToggleHBE(not HBEEnabled) end)
         AddConnection(hbBtn.MouseButton1Click, function()
-            VisualsEnabled = not VisualsEnabled
-            TweenService:Create(hbBtn, TweenInfo.new(0.2), {BackgroundColor3 = VisualsEnabled and ThemeColor or Color3.fromRGB(45, 45, 48)}):Play()
-            TweenService:Create(hbDot, TweenInfo.new(0.2), {Position = VisualsEnabled and UDim2.new(1, -14, 0.5, -5.5) or UDim2.new(0, 2, 0.5, -5.5)}):Play()
-            SendNotify("Hitboxes", VisualsEnabled and "Shown" or "Hidden")
+            HBEVisuals = not HBEVisuals
+            TweenService:Create(hbBtn, TweenInfo.new(0.2), {BackgroundColor3 = HBEVisuals and ThemeColor or Color3.fromRGB(45, 45, 48)}):Play()
+            TweenService:Create(hbDot, TweenInfo.new(0.2), {Position = HBEVisuals and UDim2.new(1, -14, 0.5, -5.5) or UDim2.new(0, 2, 0.5, -5.5)}):Play()
+            SendNotify("HBE Visuals", HBEVisuals and "Shown" or "Hidden")
         end)
-
-        FeatureTable["Magnet"] = {
-            SetState = function(s) if s ~= MagnetEnabled then ToggleMag(s) end end,
-            GetState = function() return MagnetEnabled end,
-            SetValue = function(v) _G.MagRange = v; rngLbl.Text = "Catch Range: " .. v; slideFill.Size = UDim2.new(v / 500, 0, 1, 0) end,
-            GetValue = function() return _G.MagRange end
-        }
     end
 
     local function CreateButton(page, name, callback)
@@ -711,15 +829,14 @@ local function LoadHub()
                 if key == "Time" then _G.CustomTime = v; if FeatureTable[key] and FeatureTable[key].GetState() then game:GetService("Lighting").ClockTime = v end
                 elseif key == "Bright" then _G.CustomBright = v; if FeatureTable[key] and FeatureTable[key].GetState() then game:GetService("Lighting").Brightness = v end
                 elseif key == "Predict" then _G.QBPrediction = v
-                elseif key == "HBE" then _G.HBESize = v
                 else callback(v) end
             end
 
             AddConnection(sBg.InputBegan, function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     CanDrag = false
                     local move = AddConnection(UserInputService.InputChanged, function(m)
-                        if m.UserInputType == Enum.UserInputType.MouseMovement or m.UserInputType == Enum.UserInputType.Touch then
+                        if m.UserInputType == Enum.UserInputType.MouseMovement then
                             local scale = math.clamp((m.Position.X - sBg.AbsolutePosition.X) / sBg.AbsoluteSize.X, 0, 1)
                             local val = math.floor(scale * max)
                             updateVal(val)
@@ -727,7 +844,7 @@ local function LoadHub()
                     end)
                     local release
                     release = AddConnection(UserInputService.InputEnded, function(k)
-                        if k.UserInputType == Enum.UserInputType.MouseButton1 or k.UserInputType == Enum.UserInputType.Touch then
+                        if k.UserInputType == Enum.UserInputType.MouseButton1 then
                             move:Disconnect()
                             release:Disconnect()
                             CanDrag = true
@@ -742,7 +859,6 @@ local function LoadHub()
             enabled = state
             
             if key == "Tuck" then AutoTuckEnabled = enabled
-            elseif key == "HBE" then HBEEnabled = enabled
             elseif key == "Block" then 
                 BlockEnabled = enabled
                 if not enabled then 
@@ -803,8 +919,24 @@ local function LoadHub()
             elseif key == "QBAim" then 
                 QBAimEnabled = enabled
                 if enabled then SendNotify("Info", "Hold Right Click to Aim") end
-            elseif key == "Time" then game:GetService("Lighting").ClockTime = enabled and _G.CustomTime or OriginalTime
-            elseif key == "Bright" then game:GetService("Lighting").Brightness = enabled and _G.CustomBright or OriginalBrightness
+            elseif key == "Time" then game:GetService("Lighting").ClockTime = enabled and _G.CustomTime or 12
+            elseif key == "Bright" then game:GetService("Lighting").Brightness = enabled and _G.CustomBright or 2
+            elseif key == "NoBounds" then 
+                NoBoundsEnabled = enabled
+                if enabled then
+                    -- DEEP SEARCH DELETION LOGIC (NO LAG)
+                    local function RecursiveDestroy(parent)
+                        for _, v in pairs(parent:GetChildren()) do
+                            if v.Name == _G.OOB_Part_Name then
+                                v:Destroy()
+                            else
+                                RecursiveDestroy(v)
+                            end
+                        end
+                    end
+                    RecursiveDestroy(workspace)
+                    SendNotify("No Bounds", "Executed")
+                end
             end
 
             TweenService:Create(frame, TweenInfo.new(0.3), {Size = UDim2.new(1, -20, 0, enabled and hasSlider and 120 or 60)}):Play()
@@ -850,7 +982,6 @@ local function LoadHub()
         end
     end
 
-    -- Build Features
     CreateMagnetUI(TabCatch)
     CreateToggle(TabCatch, "Auto Tuck", "Delay (ms)", true, 50, 500, "Tuck", function(v) _G.TuckSpeed = v end)
     
@@ -870,8 +1001,8 @@ local function LoadHub()
     CreateToggle(TabPlayer, "Infinite Jump", "Air Walk", false, 0, 0, "InfJump", function() end)
     CreateToggle(TabPlayer, "Noclip", "No Walls", false, 0, 0, "Noclip", function() end)
     
-    CreateToggle(TabMisc, "HBE (Self)", "Size", true, 5, 50, "HBE", function(v) _G.HBESize = v end)
-    CreateToggle(TabMisc, "No Bounds", "Remove Walls", false, 0, 0, "NoBounds", function() end)
+    CreateHBEUI(TabMisc)
+    CreateToggle(TabMisc, "No Bounds", "Delete Walls", false, 0, 0, "NoBounds", function() end)
     
     CreateButton(TabSettings, "Infinite Yield", function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end)
     CreateButton(TabSettings, "Rejoin Server", function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
@@ -922,7 +1053,6 @@ local function LoadHub()
                                 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
                             end)
                             tucked = true
-                            Log("Auto Tuck Executed")
                         end
                     else
                         tucked = false
@@ -937,153 +1067,179 @@ local function LoadHub()
         end
     end)
 
-    AddConnection(RunService.RenderStepped, function()
-        local char = LocalPlayer.Character
-        if not char then return end
+    local function GetClosestBall(handPos)
+        local closest = nil
+        local minDist = _G.MagRange
+        for _, obj in pairs(workspace:GetChildren()) do
+            if (obj.Name == "Football" or obj.Name == "Ball") and obj:IsA("BasePart") then
+                local dist = (obj.Position - handPos).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    closest = obj
+                end
+            end
+        end
+        return closest
+    end
 
-        if MagnetEnabled then
-            local ball = char:FindFirstChild("Football") or char:FindFirstChild("Ball")
-            if not ball then
-                local isCatching = tick() < MagnetCooldown or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonR2)
-                local hand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-                if isCatching and hand then
-                    for _, obj in pairs(workspace:GetChildren()) do
-                        if (obj.Name == "Football" or obj.Name == "Ball") and obj:IsA("BasePart") then
-                            local dist = (obj.Position - hand.Position).Magnitude
-                            if dist <= _G.MagRange then
-                                pcall(function()
-                                    obj.CanCollide = false
-                                    obj.AssemblyLinearVelocity = Vector3.zero
-                                    obj.AssemblyAngularVelocity = Vector3.zero
-                                    obj.RotVelocity = Vector3.zero
-                                    obj.CFrame = hand.CFrame * CFrame.new(0, -0.85, 0)
-                                end)
+    AddConnection(RunService.RenderStepped, function()
+        pcall(function()
+            local char = LocalPlayer.Character
+            if not char then return end
+
+            if MagnetEnabled then
+                local isClicking = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonR2)
+                local ball = char:FindFirstChild("Football") or char:FindFirstChild("Ball")
+                
+                if not ball and isClicking then
+                    local hand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
+                    if hand then
+                        local target = GetClosestBall(hand.Position)
+                        if target then
+                            target.CanCollide = false
+                            target.Massless = true
+                            target.AssemblyLinearVelocity = Vector3.zero
+                            target.AssemblyAngularVelocity = Vector3.zero
+                            target.CFrame = hand.CFrame * CFrame.new(0, -0.85, 0)
+                        end
+                    end
+                end
+            end
+
+            if QBAimEnabled then
+                local ball = char:FindFirstChild("Football") or char:FindFirstChild("Ball")
+                if ball and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+                    local closest, dist = nil, math.huge
+                    local mouse = UserInputService:GetMouseLocation()
+                    for _, plr in pairs(game.Players:GetPlayers()) do
+                        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                            local screenPos, visible = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                            if visible then
+                                local mag = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                                if mag < dist then closest = plr; dist = mag end
+                            end
+                        end
+                    end
+                    if closest then
+                        local hrp = closest.Character.HumanoidRootPart
+                        local pred = hrp.Position + hrp.Velocity * _G.QBPrediction / 100
+                        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, pred)
+                    end
+                end
+            end
+        end)
+    end)
+
+    AddConnection(RunService.Heartbeat, function()
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChild("Humanoid")
+            
+            if hum then
+                if SpeedEnabled and hum.WalkSpeed ~= _G.WalkSpeed then hum.WalkSpeed = _G.WalkSpeed end
+                if PowerEnabled and hum.JumpPower ~= _G.JumpPower then hum.JumpPower = _G.JumpPower end
+            end
+
+            if NoclipEnabled and char then
+                for _, v in pairs(char:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanCollide = false end
+                end
+            end
+
+            if MagnetEnabled and VisualsEnabled and char and char:FindFirstChild("HumanoidRootPart") then
+                MagPart.CFrame = char.HumanoidRootPart.CFrame
+                MagPart.Size = Vector3.new(_G.MagRange, _G.MagRange, _G.MagRange)
+                SelectionBox.Adornee = MagPart
+            else
+                SelectionBox.Adornee = nil
+            end
+
+            if IsFollowing and QBFollowEnabled then 
+                local targetPos = nil
+                local ball = workspace:FindFirstChild("Football") or workspace:FindFirstChild("Ball")
+                if ball then 
+                    targetPos = ball.Position
+                else
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p.Character and (p.Character:FindFirstChild("Football") or p.Character:FindFirstChild("Ball")) then
+                            targetPos = p.Character.HumanoidRootPart.Position
+                            break
+                        end
+                    end
+                end
+                if targetPos and hum then hum:MoveTo(targetPos) end
+            end
+
+            if AutoTackleEnabled then 
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        if p.Character:FindFirstChild("Football") or p.Character:FindFirstChild("Ball") then
+                            if char and char:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("HumanoidRootPart") then
+                                char.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
                             end
                         end
                     end
                 end
             end
-        end
 
-        if QBAimEnabled then
-            local ball = char:FindFirstChild("Football") or char:FindFirstChild("Ball")
-            if ball and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-                local closest, dist = nil, math.huge
-                local mouse = UserInputService:GetMouseLocation()
-                for _, plr in pairs(game.Players:GetPlayers()) do
-                    if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                        local screenPos, visible = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-                        if visible then
-                            local mag = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                            if mag < dist then closest = plr; dist = mag end
+            if TruckEnabled and TruckingHeld and char then
+                local val = char:FindFirstChild("Trucking", true)
+                if val then val.Value = true end
+            end
+
+            if BlockEnabled then
+                for _, p in pairs(game.Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        local c = p.Character
+                        local j = c:FindFirstChild("Jersey") or c:FindFirstChild("Hitbox")
+                        if j then j.Size = Vector3.new(10, 10, 10) end
+                    end
+                end
+            end
+
+            if HBEEnabled and char then
+                local targets = {char:FindFirstChild("Hitbox"), char:FindFirstChild("Jersey"), char:FindFirstChild("UpperJersey"), char:FindFirstChild("LowerJersey")}
+                for _, part in pairs(targets) do
+                    if part then
+                        if _G.HBESize > 0 then
+                            part.Size = Vector3.new(_G.HBESize, _G.HBESize, _G.HBESize)
+                            part.CanCollide = false
+                            part.Massless = true
                         end
-                    end
-                end
-                if closest then
-                    local hrp = closest.Character.HumanoidRootPart
-                    local pred = hrp.Position + hrp.Velocity * _G.QBPrediction / 100
-                    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, pred)
-                end
-            end
-        end
-    end)
-
-    AddConnection(RunService.Heartbeat, function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChild("Humanoid")
-        
-        if hum then
-            if SpeedEnabled and hum.WalkSpeed ~= _G.WalkSpeed then hum.WalkSpeed = _G.WalkSpeed end
-            if PowerEnabled and hum.JumpPower ~= _G.JumpPower then hum.JumpPower = _G.JumpPower end
-        end
-
-        if NoclipEnabled and char then
-            for _, v in pairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
-            end
-        end
-
-        if MagnetEnabled and VisualsEnabled and char and char:FindFirstChild("HumanoidRootPart") then
-            MagPart.CFrame = char.HumanoidRootPart.CFrame
-            MagPart.Size = Vector3.new(_G.MagRange, _G.MagRange, _G.MagRange)
-            SelectionBox.Adornee = MagPart
-        else
-            SelectionBox.Adornee = nil
-        end
-
-        -- FIXED QB FOLLOW
-        if IsFollowing and QBFollowEnabled then 
-            local targetPos = nil
-            local ball = workspace:FindFirstChild("Football") or workspace:FindFirstChild("Ball")
-            if ball then 
-                targetPos = ball.Position
-            else
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p.Character and (p.Character:FindFirstChild("Football") or p.Character:FindFirstChild("Ball")) then
-                        targetPos = p.Character.HumanoidRootPart.Position
-                        break
-                    end
-                end
-            end
-            if targetPos and hum then hum:MoveTo(targetPos) end
-        end
-
-        -- FIXED AUTO TACKLE
-        if AutoTackleEnabled then 
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    if p.Character:FindFirstChild("Football") or p.Character:FindFirstChild("Ball") then
-                        if char and char:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("HumanoidRootPart") then
-                            char.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+                        if HBEVisuals then
+                            part.Transparency = 0.5 
+                            part.Color = Color3.fromRGB(170, 0, 255)
+                        else
+                            part.Transparency = 1 
                         end
                     end
                 end
             end
-        end
 
-        if TruckEnabled and TruckingHeld and char then
-            local val = char:FindFirstChild("Trucking", true)
-            if val then val.Value = true end
-        end
-
-        if BlockEnabled then
-            for _, p in pairs(game.Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local c = p.Character
-                    local j = c:FindFirstChild("Jersey") or c:FindFirstChild("Hitbox")
-                    if j then j.Size = Vector3.new(10, 10, 10) end
+            if ShowHBEnabled then
+                for _, p in pairs(game.Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        local j = p.Character:FindFirstChild("Jersey") or p.Character:FindFirstChild("Hitbox")
+                        if j then j.Transparency = 0.8 end
+                    end
                 end
             end
-        end
 
-        if HBEEnabled and char then
-            local hb = char:FindFirstChild("Hitbox") or char:FindFirstChild("Jersey") or char:FindFirstChild("HumanoidRootPart")
-            if hb then hb.Size = Vector3.new(_G.HBESize, _G.HBESize, _G.HBESize) end
-        end
+            if AntiKnockEnabled and char then
+                local l = char:FindFirstChild("Left Arm")
+                local r = char:FindFirstChild("Right Arm")
+                if l and r then l.Size = Vector3.new(20, 2, 2); r.Size = Vector3.new(20, 2, 2) end
+            end
 
-        if ShowHBEnabled then
-            for _, p in pairs(game.Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local j = p.Character:FindFirstChild("Jersey") or p.Character:FindFirstChild("Hitbox")
-                    if j then j.Transparency = 0.8 end
+            if BigHeadEnabled then
+                for _, p in pairs(game.Players:GetPlayers()) do
+                    if p.Character and p.Character:FindFirstChild("Head") then
+                        p.Character.Head.Size = Vector3.new(4, 4, 4)
+                        p.Character.Head.Transparency = 1
+                    end
                 end
             end
-        end
-
-        if AntiKnockEnabled and char then
-            local l = char:FindFirstChild("Left Arm")
-            local r = char:FindFirstChild("Right Arm")
-            if l and r then l.Size = Vector3.new(20, 2, 2); r.Size = Vector3.new(20, 2, 2) end
-        end
-
-        if BigHeadEnabled then
-            for _, p in pairs(game.Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("Head") then
-                    p.Character.Head.Size = Vector3.new(4, 4, 4)
-                    p.Character.Head.Transparency = 1
-                end
-            end
-        end
+        end)
     end)
 
     AddConnection(UserInputService.JumpRequest, function()
@@ -1130,11 +1286,9 @@ local function LoadHub()
         end
     end)
 
-    -- Show First Tab
     for _, p in pairs(PagesContainer:GetChildren()) do p.Visible = false end
     PagesContainer:GetChildren()[1].Visible = true
     Log("Pharmacii Hub: https://discord.gg/P3MaHnCRjN.")
 end
 
--- 4. Run Script Directly (Whitelist Removed)
 LoadHub()
