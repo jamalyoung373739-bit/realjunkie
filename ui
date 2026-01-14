@@ -1,4 +1,4 @@
--- [[ PHARMACII HUB - V46: HBE VISUAL RESET + ROBUST DELETE ]] --
+-- [[ PHARMACII HUB - V47: FULL MOBILE SUPPORT (SLIDERS + LOGO) ]] --
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -10,9 +10,9 @@ local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Camera = workspace.CurrentCamera
 
--- [[ 🟢 CONFIGURATION 🟢 ]] --
+-- [[ CONFIGURATION ]] --
 _G.HideKey = Enum.KeyCode.LeftControl
-_G.OOB_Part_Name = "OOB Area" -- Exact name of the Model/Part to DELETE
+_G.OOB_Part_Name = "OOB Area"
 _G.MagRange = 25 
 _G.TuckSpeed = 100
 _G.WalkSpeed = 16
@@ -78,7 +78,6 @@ local function LoadHub()
     local CurrentTab = nil
     local TruckingHeld = false
     local MagnetCooldown = 0
-    local MagnetLatchTime = 0.5
     local FeatureTable = {}
     
     local ThemeColor = Color3.fromRGB(130, 70, 255)
@@ -151,8 +150,9 @@ local function LoadHub()
     local resizeStartBR = Vector2.new()
     local startSizeBR = UDim2.new()
 
+    -- MOBILE FIX: Added Touch check
     AddConnection(ResizeBtnBR.InputBegan, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isResizingBR = true
             resizeStartBR = input.Position
             startSizeBR = MainFrame.Size
@@ -162,7 +162,7 @@ local function LoadHub()
     end)
 
     AddConnection(UserInputService.InputChanged, function(input)
-        if isResizingBR and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if isResizingBR and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - resizeStartBR
             local newX = math.max(450, startSizeBR.X.Offset + delta.X)
             local newY = math.max(300, startSizeBR.Y.Offset + delta.Y)
@@ -171,7 +171,7 @@ local function LoadHub()
     end)
 
     AddConnection(UserInputService.InputEnded, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isResizingBR = false
             CanDrag = true
             ResizeBtnBR.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -193,8 +193,9 @@ local function LoadHub()
     local startSizeTL = UDim2.new()
     local startPosTL = UDim2.new()
 
+    -- MOBILE FIX: Added Touch check
     AddConnection(ResizeBtnTL.InputBegan, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isResizingTL = true
             resizeStartTL = input.Position
             startSizeTL = MainFrame.Size
@@ -205,7 +206,7 @@ local function LoadHub()
     end)
 
     AddConnection(UserInputService.InputChanged, function(input)
-        if isResizingTL and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if isResizingTL and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - resizeStartTL
             local newWidth = math.max(450, startSizeTL.X.Offset - delta.X)
             local newHeight = math.max(300, startSizeTL.Y.Offset - delta.Y)
@@ -219,7 +220,7 @@ local function LoadHub()
     end)
 
     AddConnection(UserInputService.InputEnded, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isResizingTL = false
             CanDrag = true
             ResizeBtnTL.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -241,20 +242,21 @@ local function LoadHub()
         })
     end)
 
+    -- [[ 🟢 MOBILE TOGGLE LOGO UPDATE 🟢 ]] --
     local ToggleFrame = Instance.new("Frame", ScreenGui)
-    ToggleFrame.Size = UDim2.new(0, 50, 0, 50)
+    ToggleFrame.Size = UDim2.new(0, 55, 0, 55)
     ToggleFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
     ToggleFrame.BackgroundColor3 = ElementBG
     ToggleFrame.BorderSizePixel = 0
     ToggleFrame.Visible = UserInputService.TouchEnabled
-    Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 8)
-    local ToggleBtn = Instance.new("TextButton", ToggleFrame)
-    ToggleBtn.Size = UDim2.new(1, 0, 1, 0)
+    Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 12)
+    
+    local ToggleBtn = Instance.new("ImageButton", ToggleFrame)
+    ToggleBtn.Size = UDim2.new(1, -10, 1, -10)
+    ToggleBtn.Position = UDim2.new(0, 5, 0, 5)
     ToggleBtn.BackgroundTransparency = 1
-    ToggleBtn.Text = "P"
-    ToggleBtn.TextColor3 = ThemeColor
-    ToggleBtn.Font = "GothamBold"
-    ToggleBtn.TextSize = 24
+    ToggleBtn.Image = "rbxthumb://type=Asset&id=137038623162916&w=420&h=420" -- Your Logo
+    ToggleBtn.ScaleType = Enum.ScaleType.Fit
     
     AddConnection(ToggleBtn.MouseButton1Click, function()
         MainFrame.Visible = not MainFrame.Visible
@@ -599,11 +601,12 @@ local function LoadHub()
             SendNotify("Magnet", MagnetEnabled and "Enabled" or "Disabled")
         end
 
+        -- MOBILE FIX: Added Touch
         AddConnection(slideBg.InputBegan, function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 CanDrag = false
                 local move = AddConnection(UserInputService.InputChanged, function(m)
-                    if m.UserInputType == Enum.UserInputType.MouseMovement then
+                    if m.UserInputType == Enum.UserInputType.MouseMovement or m.UserInputType == Enum.UserInputType.Touch then
                         local scale = math.clamp((m.Position.X - slideBg.AbsolutePosition.X) / slideBg.AbsoluteSize.X, 0, 1)
                         slideFill.Size = UDim2.new(scale, 0, 1, 0)
                         _G.MagRange = math.floor(scale * 500)
@@ -612,7 +615,7 @@ local function LoadHub()
                 end)
                 local release
                 release = AddConnection(UserInputService.InputEnded, function(k)
-                    if k.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if k.UserInputType == Enum.UserInputType.MouseButton1 or k.UserInputType == Enum.UserInputType.Touch then
                         move:Disconnect()
                         release:Disconnect()
                         CanDrag = true
@@ -704,7 +707,6 @@ local function LoadHub()
             TweenService:Create(dot, TweenInfo.new(0.2), {Position = HBEEnabled and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}):Play()
             SendNotify("Hitbox Expander", HBEEnabled and "Enabled" or "Disabled")
 
-            -- RESET VISUALS WHEN TURNED OFF
             if not state and LocalPlayer.Character then
                  for _, partName in pairs({"Hitbox", "Jersey", "UpperJersey", "LowerJersey"}) do
                      local part = LocalPlayer.Character:FindFirstChild(partName)
@@ -713,11 +715,12 @@ local function LoadHub()
             end
         end
 
+        -- MOBILE FIX: Added Touch
         AddConnection(slideBg.InputBegan, function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 CanDrag = false
                 local move = AddConnection(UserInputService.InputChanged, function(m)
-                    if m.UserInputType == Enum.UserInputType.MouseMovement then
+                    if m.UserInputType == Enum.UserInputType.MouseMovement or m.UserInputType == Enum.UserInputType.Touch then
                         local scale = math.clamp((m.Position.X - slideBg.AbsolutePosition.X) / slideBg.AbsoluteSize.X, 0, 1)
                         slideFill.Size = UDim2.new(scale, 0, 1, 0)
                         _G.HBESize = math.floor(scale * 5 * 10) / 10 
@@ -727,7 +730,7 @@ local function LoadHub()
                 end)
                 local release
                 release = AddConnection(UserInputService.InputEnded, function(k)
-                    if k.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if k.UserInputType == Enum.UserInputType.MouseButton1 or k.UserInputType == Enum.UserInputType.Touch then
                         move:Disconnect()
                         release:Disconnect()
                         CanDrag = true
@@ -840,11 +843,12 @@ local function LoadHub()
                 else callback(v) end
             end
 
+            -- MOBILE FIX: Added Touch
             AddConnection(sBg.InputBegan, function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     CanDrag = false
                     local move = AddConnection(UserInputService.InputChanged, function(m)
-                        if m.UserInputType == Enum.UserInputType.MouseMovement then
+                        if m.UserInputType == Enum.UserInputType.MouseMovement or m.UserInputType == Enum.UserInputType.Touch then
                             local scale = math.clamp((m.Position.X - sBg.AbsolutePosition.X) / sBg.AbsoluteSize.X, 0, 1)
                             local val = math.floor(scale * max)
                             updateVal(val)
@@ -852,7 +856,7 @@ local function LoadHub()
                     end)
                     local release
                     release = AddConnection(UserInputService.InputEnded, function(k)
-                        if k.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if k.UserInputType == Enum.UserInputType.MouseButton1 or k.UserInputType == Enum.UserInputType.Touch then
                             move:Disconnect()
                             release:Disconnect()
                             CanDrag = true
@@ -927,23 +931,18 @@ local function LoadHub()
             elseif key == "QBAim" then 
                 QBAimEnabled = enabled
                 if enabled then SendNotify("Info", "Hold Right Click to Aim") end
-            elseif key == "Time" then game:GetService("Lighting").ClockTime = enabled and _G.CustomTime or OriginalTime
-            elseif key == "Bright" then game:GetService("Lighting").Brightness = enabled and _G.CustomBright or OriginalBrightness
+            elseif key == "Time" then game:GetService("Lighting").ClockTime = enabled and _G.CustomTime or 12
+            elseif key == "Bright" then game:GetService("Lighting").Brightness = enabled and _G.CustomBright or 2
             elseif key == "NoBounds" then 
                 NoBoundsEnabled = enabled
                 if enabled then
-                    -- DEEP SEARCH DELETION
-                    local function RecursiveDestroy(parent)
-                        for _, v in pairs(parent:GetChildren()) do
-                            if v.Name == _G.OOB_Part_Name then
-                                v:Destroy()
-                                SendNotify("No Bounds", "Deleted " .. v.Name)
-                            else
-                                RecursiveDestroy(v)
-                            end
-                        end
+                    local t = workspace:FindFirstChild(_G.OOB_Part_Name)
+                    if t then 
+                        t:Destroy() 
+                        SendNotify("No Bounds", "Deleted " .. _G.OOB_Part_Name) 
+                    else 
+                        SendNotify("No Bounds", "Not Found") 
                     end
-                    RecursiveDestroy(workspace)
                 end
             end
 
