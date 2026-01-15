@@ -1,4 +1,4 @@
--- [[ PHARMACII HUB - V47: FULL MOBILE SUPPORT (SLIDERS + LOGO) ]] --
+-- [[ PHARMACII HUB - V48: CONFIG MANAGER UPDATE + FIXED BOUNDS ]] --
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -8,11 +8,12 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService") -- Added for Config Manager
 local Camera = workspace.CurrentCamera
 
 -- [[ CONFIGURATION ]] --
 _G.HideKey = Enum.KeyCode.LeftControl
-_G.OOB_Part_Name = "OOB Area"
+_G.OOB_Part_Name = "OOB Area" -- Legacy support, new logic handles more
 _G.MagRange = 25 
 _G.TuckSpeed = 100
 _G.WalkSpeed = 16
@@ -936,12 +937,22 @@ local function LoadHub()
             elseif key == "NoBounds" then 
                 NoBoundsEnabled = enabled
                 if enabled then
-                    local t = workspace:FindFirstChild(_G.OOB_Part_Name)
-                    if t then 
-                        t:Destroy() 
-                        SendNotify("No Bounds", "Deleted " .. _G.OOB_Part_Name) 
+                    -- UPDATED NO BOUNDS LOGIC
+                    local count = 0
+                    local function check(v)
+                        if v:IsA("BasePart") then
+                            local n = string.lower(v.Name)
+                            if n == string.lower(_G.OOB_Part_Name) or string.find(n, "oob") or string.find(n, "boundary") or string.find(n, "border") then
+                                v:Destroy()
+                                count = count + 1
+                            end
+                        end
+                    end
+                    for _, v in pairs(workspace:GetDescendants()) do check(v) end
+                    if count > 0 then 
+                        SendNotify("No Bounds", "Deleted " .. count .. " Barriers")
                     else 
-                        SendNotify("No Bounds", "Not Found") 
+                        SendNotify("No Bounds", "No Barriers Found") 
                     end
                 end
             end
@@ -962,32 +973,208 @@ local function LoadHub()
         }
     end
 
-    local ConfigFile = "PharmaciiConfig.json"
-    local function SaveCfg()
-        if not writefile then SendNotify("Error", "Executor not supported"); return end
-        local data = {}
-        for k, v in pairs(FeatureTable) do
-            data[k] = {Enabled = v.GetState(), Value = v.GetValue and v.GetValue() or 0}
+    -- [[ 🟠 UPDATED CONFIG MANAGER (PURPLE THEME) 🟠 ]] --
+    
+    local ConfigList = {}
+    local SelectedConfig = nil
+    local ConfigFileName = "Pharmacii_V48_Configs.json"
+    local AutoLoadFileName = "Pharmacii_Autoload.txt"
+
+    -- File System Helpers
+    local function SaveFileSystem()
+        if writefile then writefile(ConfigFileName, HttpService:JSONEncode(ConfigList)) end
+    end
+    local function LoadFileSystem()
+        if isfile and isfile(ConfigFileName) then
+            local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
+            if success then ConfigList = decoded end
         end
-        writefile(ConfigFile, HttpService:JSONEncode(data))
-        SendNotify("Config", "Saved Successfully")
+    end
+    local function SaveAutoLoad(name)
+        if writefile then writefile(AutoLoadFileName, name) end
+    end
+    local function GetAutoLoad()
+        if isfile and isfile(AutoLoadFileName) then return readfile(AutoLoadFileName) end
+        return "---"
+    end
+    
+    LoadFileSystem()
+
+    -- UI Elements for Config Tab
+    local ConfigHeader = Instance.new("TextLabel", TabSettings)
+    ConfigHeader.Text = "Configuration"
+    ConfigHeader.Size = UDim2.new(1, 0, 0, 30)
+    ConfigHeader.BackgroundTransparency = 1
+    ConfigHeader.TextColor3 = ThemeColor
+    ConfigHeader.Font = "GothamBold"
+    ConfigHeader.TextSize = 16
+
+    local NameLabel = Instance.new("TextLabel", TabSettings)
+    NameLabel.Text = "Config Name"
+    NameLabel.Size = UDim2.new(1, -20, 0, 20)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.TextColor3 = Color3.new(1,1,1)
+    NameLabel.Font = "GothamBold"
+    NameLabel.TextSize = 12
+    NameLabel.TextXAlignment = "Left"
+
+    local NameInput = Instance.new("TextBox", TabSettings)
+    NameInput.Size = UDim2.new(1, -20, 0, 35)
+    NameInput.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+    NameInput.Text = ""
+    NameInput.PlaceholderText = "Enter config name..."
+    NameInput.TextColor3 = Color3.new(1,1,1)
+    NameInput.Font = "Gotham"
+    NameInput.TextSize = 12
+    Instance.new("UICorner", NameInput)
+
+    local CreateBtn = Instance.new("TextButton", TabSettings)
+    CreateBtn.Size = UDim2.new(1, -20, 0, 35)
+    CreateBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    CreateBtn.Text = "Create Config"
+    CreateBtn.TextColor3 = ThemeColor
+    CreateBtn.Font = "GothamBold"
+    CreateBtn.TextSize = 12
+    Instance.new("UICorner", CreateBtn)
+
+    local ListLabel = Instance.new("TextLabel", TabSettings)
+    ListLabel.Text = "Config List"
+    ListLabel.Size = UDim2.new(1, -20, 0, 20)
+    ListLabel.BackgroundTransparency = 1
+    ListLabel.TextColor3 = Color3.new(1,1,1)
+    ListLabel.Font = "GothamBold"
+    ListLabel.TextSize = 12
+    ListLabel.TextXAlignment = "Left"
+
+    local ConfigScroll = Instance.new("ScrollingFrame", TabSettings)
+    ConfigScroll.Size = UDim2.new(1, -20, 0, 100)
+    ConfigScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+    ConfigScroll.ScrollBarThickness = 2
+    Instance.new("UICorner", ConfigScroll)
+    local ConfigListLayout = Instance.new("UIListLayout", ConfigScroll)
+    ConfigListLayout.Padding = UDim.new(0, 2)
+
+    local AutoLoadLabel = Instance.new("TextLabel", TabSettings)
+    AutoLoadLabel.Text = "Current Autoload Config: " .. GetAutoLoad()
+    AutoLoadLabel.Size = UDim2.new(1, -20, 0, 20)
+    AutoLoadLabel.BackgroundTransparency = 1
+    AutoLoadLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    AutoLoadLabel.Font = "GothamBold"
+    AutoLoadLabel.TextSize = 11
+
+    local function RefreshConfigList()
+        for _, v in pairs(ConfigScroll:GetChildren()) do 
+            if v:IsA("TextButton") then v:Destroy() end 
+        end
+        
+        for name, _ in pairs(ConfigList) do
+            local btn = Instance.new("TextButton", ConfigScroll)
+            btn.Size = UDim2.new(1, 0, 0, 25)
+            btn.BackgroundTransparency = 1
+            btn.Text = name
+            btn.TextColor3 = (SelectedConfig == name) and ThemeColor or Color3.fromRGB(200, 200, 200)
+            btn.Font = "Gotham"
+            btn.TextSize = 12
+            
+            AddConnection(btn.MouseButton1Click, function()
+                SelectedConfig = name
+                RefreshConfigList()
+            end)
+        end
+        ConfigScroll.CanvasSize = UDim2.new(0, 0, 0, ConfigListLayout.AbsoluteContentSize.Y)
     end
 
-    local function LoadCfg()
-        if not isfile or not readfile then SendNotify("Error", "Executor not supported"); return end
-        if isfile(ConfigFile) then
-            local data = HttpService:JSONDecode(readfile(ConfigFile))
+    AddConnection(CreateBtn.MouseButton1Click, function()
+        local name = NameInput.Text
+        if name ~= "" then
+            local data = {}
+            for k, v in pairs(FeatureTable) do
+                data[k] = {Enabled = v.GetState(), Value = v.GetValue and v.GetValue() or 0}
+            end
+            ConfigList[name] = data
+            SaveFileSystem()
+            RefreshConfigList()
+            SendNotify("Config", "Created: " .. name)
+        end
+    end)
+
+    local function CreateActionBtn(text, callback)
+        local btn = Instance.new("TextButton", TabSettings)
+        btn.Size = UDim2.new(1, -20, 0, 30)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        btn.Text = text
+        btn.TextColor3 = ThemeColor
+        btn.Font = "GothamBold"
+        btn.TextSize = 11
+        Instance.new("UICorner", btn)
+        AddConnection(btn.MouseButton1Click, callback)
+    end
+
+    CreateActionBtn("Load Config", function()
+        if SelectedConfig and ConfigList[SelectedConfig] then
+            local data = ConfigList[SelectedConfig]
             for k, v in pairs(data) do
                 if FeatureTable[k] then
                     FeatureTable[k].SetState(v.Enabled)
                     if v.Value and FeatureTable[k].SetValue then FeatureTable[k].SetValue(v.Value) end
                 end
             end
-            SendNotify("Config", "Loaded Successfully")
-        else
-            SendNotify("Config", "No Save File Found")
+            SendNotify("Config", "Loaded: " .. SelectedConfig)
         end
-    end
+    end)
+
+    CreateActionBtn("Overwrite Config", function()
+        if SelectedConfig then
+            local data = {}
+            for k, v in pairs(FeatureTable) do
+                data[k] = {Enabled = v.GetState(), Value = v.GetValue and v.GetValue() or 0}
+            end
+            ConfigList[SelectedConfig] = data
+            SaveFileSystem()
+            SendNotify("Config", "Overwritten: " .. SelectedConfig)
+        end
+    end)
+
+    CreateActionBtn("Delete Config", function()
+        if SelectedConfig then
+            ConfigList[SelectedConfig] = nil
+            SelectedConfig = nil
+            SaveFileSystem()
+            RefreshConfigList()
+            SendNotify("Config", "Deleted Config")
+        end
+    end)
+
+    CreateActionBtn("Set As Autoload", function()
+        if SelectedConfig then
+            SaveAutoLoad(SelectedConfig)
+            AutoLoadLabel.Text = "Current Autoload Config: " .. SelectedConfig
+            SendNotify("Config", "Autoload Set")
+        end
+    end)
+
+    CreateActionBtn("Reset Autoload", function()
+        SaveAutoLoad("---")
+        AutoLoadLabel.Text = "Current Autoload Config: ---"
+        SendNotify("Config", "Autoload Reset")
+    end)
+    
+    RefreshConfigList()
+
+    -- Autoload Logic
+    task.delay(1, function()
+        local auto = GetAutoLoad()
+        if auto ~= "---" and ConfigList[auto] then
+            local data = ConfigList[auto]
+            for k, v in pairs(data) do
+                if FeatureTable[k] then
+                    FeatureTable[k].SetState(v.Enabled)
+                    if v.Value and FeatureTable[k].SetValue then FeatureTable[k].SetValue(v.Value) end
+                end
+            end
+            SendNotify("Config", "Autoloaded: " .. auto)
+        end
+    end)
 
     CreateMagnetUI(TabCatch)
     CreateToggle(TabCatch, "Auto Tuck", "Delay (ms)", true, 50, 500, "Tuck", function(v) _G.TuckSpeed = v end)
@@ -1012,12 +1199,10 @@ local function LoadHub()
     CreateToggle(TabMisc, "No Bounds", "Delete Walls", false, 0, 0, "NoBounds", function() end)
     
     CreateButton(TabSettings, "Infinite Yield", function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end)
-    CreateButton(TabSettings, "Rejoin Server", function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
+    CreateButton(TabSettings, "Rejoin Server", function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end)
     CreateToggle(TabSettings, "Visible All Hitboxes", "See Everyone", false, 0, 0, "ShowHB", function() end)
     CreateToggle(TabSettings, "World Time", "Clock Time", true, 12, 24, "Time", function(v) end)
     CreateToggle(TabSettings, "Brightness", "Light Level", true, 2, 10, "Bright", function(v) end)
-    CreateButton(TabSettings, "Save Config", SaveCfg)
-    CreateButton(TabSettings, "Load Config", LoadCfg)
 
     local KeybindActive = false
     local KeybindBtn = nil
@@ -1040,7 +1225,7 @@ local function LoadHub()
         if not g and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
             local char = LocalPlayer.Character
             local ball = char and (char:FindFirstChild("Football") or char:FindFirstChild("Ball"))
-            if not ball then MagnetCooldown = tick() + MagnetLatchTime end
+            if not ball then MagnetCooldown = tick() + 0.1 end
         end
     end)
 
